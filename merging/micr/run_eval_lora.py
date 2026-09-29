@@ -578,12 +578,14 @@ def run_lora_pipeline(
         shutil.rmtree(tmp_dir, ignore_errors=True)
         print(f"[baseline] Measured: {base_acc:.4f}")
         current_acc = base_acc
+        baseline_acc = base_acc
     else:
         # Eval disabled: seed the reported score from a stored baseline measured
         # on this runner's split, if one exists; scores from other splits are
         # not comparable and are ignored.
         _profiler_baseline = get_baseline(target_label, split=eval_split)
         current_acc = float(_profiler_baseline if _profiler_baseline is not None else 0.0)
+        baseline_acc = current_acc
 
     # 6. Processing Loop
     step_idx = 0
@@ -666,7 +668,12 @@ def run_lora_pipeline(
                 print(f"  [eval] Old: {current_acc:.2f}, New: {new_acc:.2f}")
 
                 drop_tol = kwargs.get("drop_tolerance", 2.0)
-                if new_acc < (current_acc - drop_tol):
+                # Judged against the ORIGINAL baseline, not current_acc. The
+                # latter is updated to new_acc on every accept, so the reference
+                # walked downward and a run of individually-small drops could
+                # take the adapter arbitrarily far below where it started.
+                # current_acc is still tracked for the log and the score column.
+                if new_acc < (baseline_acc - drop_tol):
                     decision = "rejected"
                     print("  [decision] REJECTED (Rolling back)")
                     restore_lora_weights(

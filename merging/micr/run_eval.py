@@ -1420,9 +1420,14 @@ def run_single_target_pipeline(
     # Baseline and thresholds for target
     thresholds: Dict[str, float] = {}
     last_score: Dict[str, float] = {}
+    # The UNMERGED baseline, written once and never updated -- every accept/
+    # reject is judged against it, so cumulative drift cannot exceed the
+    # tolerance no matter how many merges are applied.
+    baseline_score: Dict[str, float] = {}
 
     thresholds[target_label] = 0.0
     last_score[target_label] = 0.0
+    baseline_score[target_label] = 0.0
 
     merge_device = resolve_merge_device(merge_device, enable_scaling)
     print(_describe_merge_device(merge_device, enable_scaling))
@@ -1684,6 +1689,7 @@ def run_single_target_pipeline(
                 persist_candidate_dir = None
         thresholds[target_label] = base_acc
         last_score[target_label] = base_acc
+        baseline_score[target_label] = base_acc
         print(f"[baseline] {target_label} = {base_acc:.4f}")
         _append_csv_row(
             results_csv,
@@ -2143,8 +2149,17 @@ def run_single_target_pipeline(
             )
             return step_counter + 1
 
-        # Accept/reject
-        old_acc = last_score[target_label]
+        # Accept/reject -- always judged against the ORIGINAL unmerged baseline.
+        #
+        # This previously compared against last_score, which is the running
+        # MINIMUM of accepted scores (see below), so the floor ratcheted down
+        # permanently: each merge only had to stay within drop_tolerance of the
+        # worst point reached so far, and the cumulative loss from baseline was
+        # unbounded. On the recorded runs that let deepseek-math slide 6.7 pp
+        # below its baseline through steps that each individually passed a 2.0
+        # pp check. Anchoring to the baseline makes drop_tolerance mean what
+        # run_config.json says it means: total degradation vs the unmerged model.
+        old_acc = baseline_score[target_label]
         # drop_tolerance is specified in absolute percentage points (e.g., 1.5)
         allowed_drop = float(drop_tolerance)
         if new_acc + 1e-12 < (old_acc - allowed_drop):
