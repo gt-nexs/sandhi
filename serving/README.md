@@ -116,6 +116,14 @@ renders the comparison plots. Logs stream to
 `<result_dir>/logs/{servers,benchmarks}/`; watch them from a second terminal
 via `docker exec -it sandhi_eval /bin/bash`.
 
+These commands are self-contained: models download automatically, and the
+sandhi arm deduplicates the original checkpoints according to the spec — no
+merged weights need to be built first. The recorded reference runs in
+`results/` (`*_variants`) additionally serve the materialized merged weights,
+built with `../merging/GENERATE_VARIANTS.md` and enabled via `MODELS_SANDHI`
+(§ *Serving the exact merged weights* below); both configurations agree
+within a few percent.
+
 ## Deployment scenarios (configs)
 
 | config | pool | merging set | GPUs (TP) | memory budget | ballast/GPU (H200) | spec (`SHARED_SPEC`) |

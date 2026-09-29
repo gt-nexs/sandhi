@@ -135,16 +135,6 @@ python parse_bench_logs.py --results-root ../results   # or your run's results d
 python performance_plots.py                            # -> figures/*.pdf
 ```
 
-These commands are self-contained: models download automatically, and the
-sandhi arm deduplicates the original checkpoints according to the spec — no
-merged weights need to be built first. The recorded reference runs in
-`serving/results/` (`*_variants`) additionally serve the materialized merged
-weights, built with `merging/GENERATE_VARIANTS.md` and enabled via
-`MODELS_SANDHI` (see `serving/README.md` § Serving the exact merged weights);
-both configurations agree within a few percent.
-
-Figures 7–11 and the §5.9 ablations are out of scope for this artifact.
-
 ## Dependencies
 
 - **Python packages** — installable with pip. `merging/requirements.txt` is a
